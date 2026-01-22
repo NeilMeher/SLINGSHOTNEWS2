@@ -1,0 +1,22 @@
+{
+    "id": "c1d2e3f4-g5h6-7i8j-9k0l-m1n2o3p4q5r6",
+    "name": "Slingshot News - Local",
+    "values": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:5000/api",
+            "enabled": true
+        },
+        {
+            "key": "accessToken",
+            "value": "",
+            "enabled": true
+        },
+        {
+            "key": "refreshToken",
+            "value": "",
+            "enabled": true
+        }
+    ],
+    "_postman_variable_scope": "environment"
+}
