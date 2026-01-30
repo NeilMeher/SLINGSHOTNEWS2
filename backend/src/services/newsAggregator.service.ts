@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { NewsArticle } from '../models/NewsArticle';
 import { newsApiIntegration } from '../integrations/news.integration';
+import { newsDataIntegration } from '../integrations/newsdata.integration';
 import { compareTwoStrings } from 'string-similarity';
 import { config } from '../config/env';
 
@@ -20,20 +21,140 @@ export class NewsAggregatorService {
     private readonly BBC_URL = 'https://bbc-news-api.vercel.app/api/news';
 
     async fetchLatestNews(category: string, region: string, limit: number = 20): Promise<RawArticle[]> {
+        // ONLY use NewsData.io (working API with 200 req/day)
+        // NewsAPI is rate limited (100/day exhausted)
+        // BBC/Reuters/AP are broken
         const results: RawArticle[][] = await Promise.all([
-            this.fetchFromNewsAPI(category, region),
-            this.fetchFromBBC(category),
-            this.fetchFromReuters(category),
-            this.fetchFromAP(category)
+            this.fetchFromNewsData(category, region),
+            this.fetchViralFromNewsData(category) // Fetch viral content from NewsData
         ]);
 
         const merged = results.flat();
         const deduplicated = this.deduplicateArticles(merged);
 
-        // Sort by publishedAt desc
+        // Sort by ADDICTIVENESS + recency
         return deduplicated
-            .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+            .map(article => ({
+                ...article,
+                addictiveness: this.scoreAddictiveness(article)
+            }))
+            .sort((a, b) => {
+                // Primary: addictiveness score
+                if (b.addictiveness !== a.addictiveness) {
+                    return b.addictiveness - a.addictiveness;
+                }
+                // Secondary: recency
+                return b.publishedAt.getTime() - a.publishedAt.getTime();
+            })
             .slice(0, limit);
+    }
+
+    /**
+     * Fetch VIRAL content from NewsData.io
+     */
+    private async fetchViralFromNewsData(category: string): Promise<RawArticle[]> {
+        try {
+            const viralKeywords = this.getViralKeywords(category);
+            const keyword = viralKeywords[Math.floor(Math.random() * viralKeywords.length)];
+
+            const articles = await newsDataIntegration.searchNews(keyword);
+
+            return articles.map(a => ({
+                sourceId: a.article_id,
+                source: a.source_id || 'newsdata',
+                sourceUrl: a.link,
+                category: category as any,
+                region: 'US',
+                originalHeadline: a.title,
+                originalSummary: a.description || a.content || '',
+                publishedAt: new Date(a.pubDate),
+                imageUrl: a.image_url || undefined
+            }));
+        } catch (err: any) {
+            console.error('❌ Viral NewsData fetch error:', err?.message);
+            return [];
+        }
+    }
+
+    /**
+     * Fetch VIRAL trending content
+     */
+    private async fetchViralContent(category: string): Promise<RawArticle[]> {
+        try {
+            const viralKeywords = this.getViralKeywords(category);
+            const searchQuery = viralKeywords.join(' OR ');
+
+            const response = await axios.get('https://newsapi.org/v2/everything', {
+                params: {
+                    apiKey: config.NEWS_API_KEY,
+                    q: searchQuery,
+                    sortBy: 'popularity',
+                    pageSize: 15,
+                    language: 'en'
+                }
+            });
+
+            return (response.data.articles || []).map((a: any) => this.mapNewsAPI(a, category as any, 'US'));
+        } catch (err: any) {
+            console.error('❌ Viral content fetch error:', err?.message);
+            return [];
+        }
+    }
+
+    /**
+     * Get viral keywords by category
+     */
+    private getViralKeywords(category: string): string[] {
+        const keywordMap: Record<string, string[]> = {
+            tech: ['elon musk', 'ai', 'chatgpt', 'tesla', 'apple', 'meta', 'tiktok', 'crypto'],
+            money: ['crypto crash', 'bitcoin', 'stock market', 'millionaire', 'bankruptcy', 'scam'],
+            world: ['war', 'crisis', 'protest', 'scandal', 'disaster', 'controversy'],
+            politics: ['trump', 'election', 'scandal', 'resign', 'fired', 'exposed'],
+            science: ['nasa', 'space', 'discovery', 'breakthrough', 'study reveals'],
+            health: ['covid', 'vaccine', 'outbreak', 'warning', 'danger']
+        };
+
+        return keywordMap[category] || ['viral', 'trending', 'breaking'];
+    }
+
+    /**
+     * Score article by "addictiveness"
+     */
+    private scoreAddictiveness(article: RawArticle): number {
+        let score = 0;
+        const headline = article.originalHeadline.toLowerCase();
+        const summary = article.originalSummary.toLowerCase();
+
+        // Viral personalities (Elon, Trump, celebrities)
+        const viralPeople = ['elon', 'musk', 'trump', 'biden', 'kardashian', 'bezos', 'zuckerberg'];
+        viralPeople.forEach(person => {
+            if (headline.includes(person)) score += 10;
+        });
+
+        // Controversy words (drama, scandal, etc.)
+        const controversialWords = ['drama', 'scandal', 'exposed', 'fired', 'quit', 'crash', 'fails', 'lawsuit'];
+        controversialWords.forEach(word => {
+            if (headline.includes(word)) score += 8;
+            if (summary.includes(word)) score += 3;
+        });
+
+        // Trending tech/platforms
+        const platforms = ['tiktok', 'twitter', 'instagram', 'youtube', 'reddit', 'meta'];
+        platforms.forEach(platform => {
+            if (headline.includes(platform)) score += 6;
+        });
+
+        // Numbers (prices, amounts make it interesting)
+        const hasNumber = /\$\d+|million|billion|thousand/.test(headline);
+        if (hasNumber) score += 5;
+
+        // Recency bonus
+        const hoursOld = (Date.now() - article.publishedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursOld < 3) score += 15; // Ultra fresh
+        else if (hoursOld < 12) score += 10;
+        else if (hoursOld < 24) score += 5;
+
+        return score;
     }
 
     async syncNews(): Promise<{ count: number }> {
@@ -75,6 +196,30 @@ export class NewsAggregatorService {
     async searchNews(query: string, category?: string): Promise<RawArticle[]> {
         const headlines = await newsApiIntegration.searchNews(query);
         return headlines.map(h => this.mapNewsAPI(h, (category || 'world') as any, 'US'));
+    }
+
+    private async fetchFromNewsData(category: string, region: string): Promise<RawArticle[]> {
+        try {
+            const newsDataCat = newsDataIntegration.mapCategoryToNewsData(category);
+            // NewsData.io uses different country codes (GB instead of UK)
+            const newsDataRegion = region === 'UK' ? 'GB' : region;
+            const articles = await newsDataIntegration.getLatestNews(newsDataCat, newsDataRegion);
+
+            return articles.map(a => ({
+                sourceId: a.article_id,
+                source: a.source_id || 'newsdata',
+                sourceUrl: a.link,
+                category: category as any,
+                region: region.toUpperCase(),
+                originalHeadline: a.title,
+                originalSummary: a.description || a.content || '',
+                publishedAt: new Date(a.pubDate),
+                imageUrl: a.image_url || undefined
+            }));
+        } catch (err: any) {
+            console.error('❌ NewsData Fetch Error:', err?.message || err);
+            return [];
+        }
     }
 
     private async fetchFromNewsAPI(category: string, region: string): Promise<RawArticle[]> {

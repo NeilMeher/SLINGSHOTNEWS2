@@ -85,7 +85,7 @@ export class AuthController {
     });
 
     public login = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-        const { email, password } = req.body;
+        const { email, password, rememberMe } = req.body;
 
         const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
         if (!user || !user.isActive) {
@@ -101,14 +101,19 @@ export class AuthController {
         user.lastLogin = new Date();
         await user.save();
 
+        // Token Expiry: 30 days if rememberMe, else 7 days
+        const expiryDays = rememberMe ? 30 : 7;
+        const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
+
         const accessToken = generateAccessToken(user._id.toString());
-        const refreshTokenValue = generateRefreshToken(user._id.toString());
+        // Pass string like '30d' or '7d'
+        const refreshTokenValue = generateRefreshToken(user._id.toString(), `${expiryDays}d`);
 
         // Save session
         await RefreshToken.create({
             userId: user._id,
             token: refreshTokenValue,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            expiresAt
         });
 
         return sendResponse(res, {

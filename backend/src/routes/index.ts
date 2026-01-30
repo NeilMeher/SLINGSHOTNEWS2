@@ -10,6 +10,7 @@ import translationRoutes from './translation.routes'
 import feedRoutes from './feed.routes'
 import reactionRoutes from './reaction.routes'
 import bookmarkRoutes from './bookmark.routes'
+import manualSyncRoutes from './manual-sync.routes'
 
 const router = Router()
 
@@ -28,6 +29,7 @@ router.use(`${API_VERSION}/translate`, translationRoutes)
 router.use(`${API_VERSION}/feed`, feedRoutes)
 router.use(`${API_VERSION}/articles`, reactionRoutes)
 router.use(`${API_VERSION}/bookmarks`, bookmarkRoutes)
+router.use(`${API_VERSION}/manual`, manualSyncRoutes)
 
 // Legacy endpoints (backward compatibility)
 router.use(`${API_VERSION}/reactions`, interactionRoutes)

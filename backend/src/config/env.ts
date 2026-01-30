@@ -27,6 +27,9 @@ const envSchema = z.object({
     // AI Translation
     GROQ_API_KEY: z.string().min(1, { message: "GROQ_API_KEY is required for AI translation" }),
     GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
+
+    // Grok API Wrapper (PRIMARY - FREE & UNLIMITED)
+    GROK_API_URL: z.string().default('http://localhost:6969/ask'),
 });
 
 export type Env = z.infer<typeof envSchema>;

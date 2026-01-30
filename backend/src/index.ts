@@ -77,8 +77,8 @@ const shutdown = async () => {
         console.log('📡 HTTP server closed.');
 
         try {
-            const mongoose = await import('mongoose');
-            await mongoose.default.disconnect();
+            const { disconnectDatabase } = await import('./config/database');
+            await disconnectDatabase();
             console.log('💾 Database connection closed.');
             process.exit(0);
         } catch (err) {

@@ -4,6 +4,7 @@ import { ProfilePage } from './components/profile/ProfilePage'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { VerifyEmail } from './components/auth/VerifyEmail'
 import { VerificationBanner } from './components/auth/VerificationBanner'
+import { AuthForm } from './components/auth/AuthForm'
 import { AdminPanel } from './components/admin/AdminPanel'
 import { VerticalNewsFeed } from './components/feed/VerticalNewsFeed'
 import { SavedPage } from './pages/SavedPage'
@@ -47,26 +48,9 @@ const App: React.FC = () => {
     checkStatus();
   }, [isAuthenticated]);
 
-  const handleLogin = async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/v1/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: `user_${Date.now()}@example.com`,
-        password: 'Password123!',
-        username: `temp_${Math.floor(Math.random() * 10000)}`,
-        dateOfBirth: '2000-01-01'
-      })
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      authService.setToken(result.data.tokens.accessToken);
-      refreshAuth();
-    } else {
-      alert(result.message || 'Signup failed 💀');
-    }
-  }
+  const handleAuthSuccess = () => {
+    refreshAuth();
+  };
 
   const handleLogout = () => {
     authService.logout();
@@ -87,30 +71,7 @@ const App: React.FC = () => {
   };
 
   if (!isAuthenticated) {
-    return (
-      <div className="h-screen bg-black text-white flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
-        {/* Background Blobs */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#0791ed]/20 rounded-full blur-[100px] -mr-48 -mt-48" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-[100px] -ml-48 -mb-48" />
-
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="flex flex-col items-center mb-8">
-            <h1 className="text-white text-4xl md:text-6xl font-extrabold leading-none tracking-tight drop-shadow-2xl">SLINGSHOT</h1>
-            <span className="text-[12px] font-bold tracking-[0.4em] text-[#0791ed] mt-2 drop-shadow-md">NEWS</span>
-          </div>
-          <p className="text-white/40 mb-12 text-xl font-medium max-w-sm lowercase">
-            news that actually hits different fr fr. no cap. 🚀
-          </p>
-          <button
-            onClick={handleLogin}
-            className="group relative px-12 py-5 bg-white text-black font-black text-2xl rounded-full overflow-hidden transition-all hover:scale-105 active:scale-95"
-          >
-            <span className="relative z-10">get started</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0791ed] to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
-          </button>
-        </div>
-      </div>
-    )
+    return <AuthForm onSuccess={handleAuthSuccess} />;
   }
 
   if (showOnboarding) {

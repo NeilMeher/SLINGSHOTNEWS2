@@ -4,7 +4,7 @@ export interface INewsArticle extends Document {
     sourceId: string;
     source: string;
     sourceUrl: string;
-    category: 'tech' | 'money' | 'world' | 'politics' | 'science' | 'health';
+    category: 'tech' | 'money' | 'world' | 'politics' | 'science' | 'health' | 'general';
     region: string;
 
     // Original Content
@@ -39,7 +39,7 @@ const NewsArticleSchema: Schema = new Schema({
     sourceUrl: { type: String, required: true },
     category: {
         type: String,
-        enum: ['tech', 'money', 'world', 'politics', 'science', 'health'],
+        enum: ['tech', 'money', 'world', 'politics', 'science', 'health', 'general'],
         required: true,
         index: true
     },

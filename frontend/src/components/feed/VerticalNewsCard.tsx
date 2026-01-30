@@ -83,17 +83,18 @@ export const VerticalNewsCard: React.FC<VerticalNewsCardProps> = ({ article, onR
 
                     {/* Headline */}
                     <h2 className="text-white text-3xl md:text-4xl leading-[1.05] font-black tracking-tight mb-5 drop-shadow-xl lowercase">
-                        {article.headline} {article.emoji}
+                        {article.headline || article.originalHeadline || 'loading...'} {article.emoji || '📰'}
                     </h2>
 
                     {/* Summary Bullets */}
                     <ul className="space-y-3 mb-6">
-                        {article.summary.slice(0, 3).map((point, idx) => (
-                            <li key={idx} className="flex items-start gap-3">
-                                <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${colors.bullet} flex-shrink-0 shadow-[0_0_8px_currentColor]`}></span>
-                                <p className="text-gray-100 text-sm font-bold leading-snug drop-shadow-sm">{point}</p>
-                            </li>
-                        ))}
+                        {(article.summary && article.summary.length > 0 ? article.summary :
+                            article.originalSummary ? [article.originalSummary] : ['Loading content...']).slice(0, 3).map((point, idx) => (
+                                <li key={idx} className="flex items-start gap-3">
+                                    <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${colors.bullet} flex-shrink-0 shadow-[0_0_8px_currentColor]`}></span>
+                                    <p className="text-gray-100 text-sm font-bold leading-snug drop-shadow-sm">{point}</p>
+                                </li>
+                            ))}
                     </ul>
 
                     {/* Source */}

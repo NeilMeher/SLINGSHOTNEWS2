@@ -1,0 +1,7 @@
+curl_cffi
+fastapi
+uvicorn
+coincurve==20.0.0
+beautifulsoup4
+pydantic
+colorama

@@ -49,19 +49,57 @@ export const VerticalNewsFeed: React.FC<VerticalNewsFeedProps> = ({
         setLoading(true);
 
         try {
-            const endpoint = feedType === 'trending' ? '/v1/news/trending' : '/v1/news/feed';
-            const url = isInitial
-                ? `${endpoint}?limit=10`
-                : `${endpoint}?limit=10&cursor=${cursor}`;
+            // Use unlimited endpoint for regular feed
+            const endpoint = feedType === 'trending' ? '/v1/news/trending' : '/v1/news/unlimited';
+
+            // For unlimited feed, we just request more (no cursor needed currently)
+            // For trending, we might use cursor if implemented, but currently it's just top 10
+            let url = endpoint;
+
+            if (feedType === 'trending') {
+                url = `${endpoint}?limit=10`;
+            } else {
+                // Unlimited feed - request 10 at a time
+                url = `${endpoint}?limit=10`;
+            }
+
+            // If using cursor based (old feed), keep logic:
+            if (feedType !== 'trending' && !url.includes('unlimited') && cursor && !isInitial) {
+                url += `&cursor=${cursor}`;
+            }
 
             const result = await authService.fetchWithAuth(url);
 
             if (result.success) {
-                const newArticles = feedType === 'trending' ? result.data : result.data.articles;
-                const nextCursor = feedType === 'trending' ? null : result.data.nextCursor;
-                const more = feedType === 'trending' ? false : result.data.hasMore;
+                let newArticles: Article[] = [];
+                let nextCursor = null;
+                let more = true;
 
-                setArticles(prev => isInitial ? newArticles : [...prev, ...newArticles]);
+                if (result.data.unlimited) {
+                    // Handle unlimited feed response
+                    newArticles = result.data.articles;
+                    more = true; // Always has more
+                    nextCursor = null;
+                } else if (result.data.articles) {
+                    // Handle standard paginated response
+                    newArticles = result.data.articles;
+                    nextCursor = result.data.nextCursor;
+                    more = result.data.hasMore;
+                } else if (Array.isArray(result.data)) {
+                    // Handle trending response (direct array)
+                    newArticles = result.data;
+                    more = false; // Trending is fixed list usually
+                }
+
+                setArticles(prev => {
+                    // Filter duplicates for unlimited feed
+                    if (isInitial) return newArticles;
+
+                    const existingIds = new Set(prev.map(a => a._id));
+                    const uniqueNew = newArticles.filter(a => !existingIds.has(a._id));
+                    return [...prev, ...uniqueNew];
+                });
+
                 setCursor(nextCursor);
                 setHasMore(more);
             }

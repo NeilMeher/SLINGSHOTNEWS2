@@ -5,14 +5,20 @@ node_modules/
 build/
 dist/
 
-# Environment variables
+# Environment variables (NEVER commit these!)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 *.env
-*.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+!*.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# Python
+__pycache__/
+*.pyc
 
 # Logs
 npm-debug.log*

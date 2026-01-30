@@ -14,6 +14,7 @@ const router = Router();
 router.get('/search', newsController.searchArticles);
 router.get('/feed', newsController.getFeed);
 router.get('/trending', newsController.getTrendingFeed);
+router.get('/unlimited', newsController.getUnlimitedFeed); // ✨ UNLIMITED FEED - NO RATE LIMITS!
 router.get('/sources', newsController.getSources);
 
 router.post('/sync', protect, authorize(['admin']), newsController.syncNews);

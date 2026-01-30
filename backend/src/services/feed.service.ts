@@ -15,10 +15,9 @@ export class FeedService {
         const interests = user.interests || [];
         const region = user.region || 'US';
 
-        // query articles matching interests and translated to gen z
+        // query articles matching interests - show both translated and untranslated
         const query: any = {
-            category: { $in: interests },
-            headline: { $exists: true }, // must be glowed up
+            category: { $in: interests.length > 0 ? interests : ['tech', 'money', 'world', 'politics', 'science', 'health'] },
             publishedAt: { $lte: new Date() }
         };
 
@@ -46,14 +45,10 @@ export class FeedService {
     async getTrendingFeed(userId?: string, cursor?: string, limit = 20) {
         const query: any = {
             trending: true,
-            headline: { $exists: true },
-            publishedAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) } // last 48h to give algorithm more weight
+            publishedAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) } // last 48h
         };
 
         if (cursor) {
-            // for trending we might need a custom cursor if strictly sorting by score, 
-            // but for simplicity we keep id based or skip-based if necessary.
-            // here we stick to the requested id-based cursor which works if publishers are steady.
             query._id = { $lt: new mongoose.Types.ObjectId(cursor) };
         }
 
@@ -77,7 +72,6 @@ export class FeedService {
     async getCategoryFeed(category: string, userId?: string, cursor?: string, limit = 20) {
         const query: any = {
             category,
-            headline: { $exists: true },
             publishedAt: { $lte: new Date() }
         };
 

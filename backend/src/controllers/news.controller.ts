@@ -96,6 +96,27 @@ export class NewsController {
         });
     });
 
+    /**
+     * Get unlimited news feed - no rate limits!
+     */
+    public getUnlimitedFeed = asyncHandler(async (req: Request, res: Response) => {
+        const { limit = 50 } = req.query;
+        const limitNum = Math.min(Number(limit), 100); // Max 100 per request
+
+        console.log(`🚀 Unlimited feed requested with limit: ${limitNum}`);
+
+        const articles = await newsService.getUnlimitedFeed(limitNum);
+
+        return sendResponse(res, {
+            message: `unlimited feed loaded with ${articles.length} fresh articles! 🔥`,
+            data: {
+                articles,
+                count: articles.length,
+                unlimited: true
+            }
+        });
+    });
+
     public syncNews = asyncHandler(async (req: Request, res: Response) => {
         const result = await newsAggregatorService.syncNews();
         return sendResponse(res, {

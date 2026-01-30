@@ -1,0 +1,47 @@
+# Render Blueprint - Deploy with one click
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Backend API
+  - type: web
+    name: slingshot-news-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false  # Set manually in dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: NEWS_API_KEY
+        sync: false  # Set manually
+      - key: NEWSDATA_API_KEY
+        sync: false  # Set manually
+      - key: GROQ_API_KEY
+        sync: false  # Set manually
+      - key: GROK_API_URL
+        value: http://localhost:6969/ask  # Update if deploying Grok API
+      - key: FRONTEND_URL
+        sync: false  # Set to your Netlify URL
+      - key: CORS_ORIGIN
+        sync: false  # Set to your Netlify URL
+    healthCheckPath: /api/v1/health
+
+  # Grok API (Optional - Python)
+  - type: web
+    name: slingshot-grok-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: Grok-Api
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api_server:app --host 0.0.0.0 --port $PORT
