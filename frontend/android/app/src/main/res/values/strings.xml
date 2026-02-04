@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Slingshot News</string>
+    <string name="title_activity_main">Slingshot News</string>
+    <string name="package_name">com.slingshotnews.app</string>
+    <string name="custom_url_scheme">com.slingshotnews.app</string>
+</resources>
