@@ -58,11 +58,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Global Error Handler
 app.use(globalErrorHandler);
 
-// Use httpServer instead of app.listen for Socket.io
-const server = httpServer.listen(PORT, () => {
-    console.log(`[server]: server is running at http://localhost:${PORT}`);
-    console.log(`[socket]: socket.io is ready for connections`);
-});
+// Export app for Vercel
+export default app;
+
+let server: any;
+
+// Only listen if not running on Vercel (Vercel handles the server automatically)
+if (process.env.NODE_ENV !== 'production') {
+    server = httpServer.listen(PORT, () => {
+        console.log(`[server]: server is running at http://localhost:${PORT}`);
+        console.log(`[socket]: socket.io is ready for connections`);
+    });
+}
+
 
 // Graceful Shutdown
 const shutdown = async () => {
@@ -73,9 +81,7 @@ const shutdown = async () => {
         console.log('🔌 Socket.io connections closed.');
     });
 
-    server.close(async () => {
-        console.log('📡 HTTP server closed.');
-
+    const closeDatabase = async () => {
         try {
             const { disconnectDatabase } = await import('./config/database');
             await disconnectDatabase();
@@ -85,7 +91,16 @@ const shutdown = async () => {
             console.error('❌ Error during shutdown:', err);
             process.exit(1);
         }
-    });
+    };
+
+    if (server) {
+        server.close(async () => {
+            console.log('📡 HTTP server closed.');
+            await closeDatabase();
+        });
+    } else {
+        await closeDatabase();
+    }
 };
 
 process.on('SIGTERM', shutdown);
