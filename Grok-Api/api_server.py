@@ -3,6 +3,7 @@ from urllib.parse import urlparse, ParseResult
 from pydantic     import BaseModel
 from core         import Grok
 from uvicorn      import run
+import os
 
 
 app = FastAPI()
@@ -56,4 +57,5 @@ async def create_conversation(request: ConversationRequest):
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 if __name__ == "__main__":
-    run("api_server:app", host="0.0.0.0", port=6969, workers=50)
+    port = int(os.environ.get("PORT", 6969))
+    run("api_server:app", host="0.0.0.0", port=port, workers=4)
