@@ -1,8 +1,7 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import { config } from './env';
 
-let mongoServer: MongoMemoryServer | null = null;
+let mongoServer: any = null;
 const MAX_RETRIES = 5;
 const RETRY_INTERVAL = 5000; // 5 seconds
 
@@ -29,6 +28,7 @@ export const connectDatabase = async () => {
                 console.log('🧪 Starting MongoDB Memory Server for development...');
 
                 if (!mongoServer) {
+                    const { MongoMemoryServer } = await import('mongodb-memory-server');
                     mongoServer = await MongoMemoryServer.create({
                         instance: {
                             dbName: 'slingshot_news',
