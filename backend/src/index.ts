@@ -63,10 +63,12 @@ export default app;
 
 let server: any;
 
-// Only listen if not running on Vercel (Vercel handles the server automatically)
-if (process.env.NODE_ENV !== 'production') {
-    server = httpServer.listen(PORT, () => {
-        console.log(`[server]: server is running at http://localhost:${PORT}`);
+// Only skip listening on Vercel (Vercel handles the server automatically)
+// On Render and other platforms, we need to listen on 0.0.0.0
+if (!process.env.VERCEL) {
+    const HOST = '0.0.0.0';
+    server = httpServer.listen(Number(PORT), HOST, () => {
+        console.log(`[server]: server is running at http://${HOST}:${PORT}`);
         console.log(`[socket]: socket.io is ready for connections`);
     });
 }
